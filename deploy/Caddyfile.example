@@ -1,0 +1,37 @@
+{
+	email {$ACME_EMAIL}
+	# Runtime error logs can include request URIs. Remove credentials there too;
+	# access logging is not enabled by this template.
+	log {
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					delete access_token
+					delete token
+					delete code
+					delete state
+				}
+				request>headers>Cookie delete
+				request>headers>Authorization delete
+				resp_headers>Set-Cookie delete
+			}
+		}
+	}
+}
+
+{$API_DOMAIN} {
+	@application path /api/* /rtc /rtc/* /healthz
+	handle @application {
+		reverse_proxy backend:3210 {
+			# Preserve the public API Host for the backend's exact Host guard.
+			# Origin, cookies and Upgrade headers retain their normal values.
+			header_up Host {hostport}
+			# Caddy flushes text/event-stream immediately by default. Do not use
+			# flush_interval -1: that also suppresses upstream disconnects.
+		}
+	}
+	handle {
+		respond "Not found" 404
+	}
+}

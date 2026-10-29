@@ -1,0 +1,21 @@
+# Copy to private deploy/livekit.production.yaml and replace both placeholders.
+# The backend env file and this file must contain the same LiveKit key pair.
+port: 7880
+bind_addresses:
+  - 0.0.0.0
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: true
+  # If public-IP discovery is wrong, configure a verified reachable public IP:
+  # use_external_ip: false
+  # node_ip: YOUR_PUBLIC_IPV4
+keys:
+  REPLACE_WITH_LIVEKIT_API_KEY: REPLACE_WITH_LIVEKIT_API_SECRET_AT_LEAST_32_CHARACTERS
+room:
+  auto_create: false
+logging:
+  level: warn
+# TURN is intentionally not configured in this baseline. Before serving users
+# behind restrictive networks, provision a tested TURN/TLS route and certificate.
+# Caddy already occupies public TCP 443; resolve that topology first.

@@ -15,7 +15,9 @@ The last desktop validation checkpoint on 2026-10-29 used Node.js 24.18.0 on Win
 
 [The CI workflow](../.github/workflows/ci.yml) uses an Ubuntu 24.04 runner, exact Node.js 24.18.0 and `npm ci` with the root workspace lockfile. It runs typechecking, both production builds and the test suite with `RUN_PRODUCTION_CHECK=1`. The production checks start isolated loopback servers with temporary databases and fixture keys; they do not need Discord credentials or an existing application instance.
 
-The default Ubuntu job deliberately skips the 21 Windows-only desktop/PowerShell checks and the three LiveKit integration checks. Its result must be read separately from the Windows checkpoint above. A successful Linux run is not claimed until GitHub Actions has actually completed.
+The default Ubuntu job deliberately skips the 21 Windows-only desktop/PowerShell checks and the three LiveKit integration checks. Its result must be read separately from the Windows checkpoint above. The [first Ubuntu job](https://github.com/wendachye/private-stage/actions/runs/40880895490), at commit `a7cd2a9`, passed the locked install, typechecks, both builds and portable production tests. The optional native-media job was not selected for that push.
+
+A separate clean-copy typecheck also passed without `.env`, `.next` or cached TypeScript outputs. It used an isolated source archive and local dependency links; the GitHub run above independently verified installation on Ubuntu.
 
 For a portable local run from the repository root:
 
@@ -29,6 +31,12 @@ RUN_PRODUCTION_CHECK=1 npm test
 The last line uses POSIX shell syntax. In PowerShell, set `$env:RUN_PRODUCTION_CHECK = '1'` before running `npm test`.
 
 For media CI, manually run the workflow with **livekit** enabled. That separate job creates random disposable keys and a loopback-only LiveKit `v1.13.11` container, then runs `npm run test:media` with `RUN_LIVEKIT_INTEGRATION=1`. The job masks its keys and removes the container and temporary configuration afterward. It uses no repository secrets, saved `.env`, deployment configuration or physical devices. This optional Linux native-SDK job also needs its first successful Actions run before being considered verified on that platform.
+
+## Backend container checks
+
+The production API image built from the private-state-excluding Docker context, and the Compose examples and pinned Caddy configuration passed syntax validation. An isolated, non-root image check used fictional keys, a fresh managed volume, no network and no published ports. Health, exact-origin CORS, secure host-only cookies and rejection of untrusted Host/Origin passed.
+
+The container check also reproduced a stale PID-lock failure after SIGKILL, then verified the container entrypoint's exclusive OS lock: a concurrent writer was refused without changing the active lock; SIGKILL followed by restart recovered the same volume; graceful shutdown exited zero and removed the application lock. The OS-lock inode remains in place. See [deployment](deployment.md) for the opt-in regression command and managed-volume boundary. Public TLS, ingress and real media connectivity still need deployment acceptance.
 
 ## Pending acceptance checks
 
