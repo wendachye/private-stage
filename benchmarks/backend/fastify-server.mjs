@@ -1,0 +1,11 @@
+import Fastify from 'fastify';
+import { perform, control, closeFixture } from './workload.mjs';
+const app = Fastify({ logger: false });
+app.get('/api/health', async () => ({ ready: true, backend: 'Fastify 5' }));
+app.route({ method: ['GET', 'POST'], url: '/api/bench', handler: async request => perform(request.method, request.body) });
+app.post('/api/control', async request => control(request.body));
+app.setErrorHandler((error, _request, reply) => reply.status(error.name === 'ZodError' ? 400 : error.status ?? 500).send({ error: error.message }));
+const stop = async () => { await app.close(); closeFixture(); process.exit(); };
+process.on('SIGTERM', stop); process.on('SIGINT', stop);
+await app.listen({ port: Number(process.env.PORT), host: '127.0.0.1' });
+console.log('BENCH_READY');
