@@ -22,13 +22,13 @@ async function verifyProductionHtml(mode: 'combined' | 'frontend') {
   let output='';child.stdout.on('data',data=>output+=String(data));child.stderr.on('data',data=>output+=String(data));
   const exited=new Promise<void>(resolve=>child.once('exit',()=>resolve()));
   try{
-    let ready=false;
+    let ready=false,lastProbe='';
     for(let attempt=0;attempt<80;attempt++){
       if(child.exitCode!==null)throw new Error('Production child exited: '+output);
-      try{const response=await fetch(`http://127.0.0.1:${port}${mode==='combined'?'/healthz':'/'}`,{signal:AbortSignal.timeout(500)});if(response.ok){ready=true;break;}}catch{}
+      try{const response=await fetch(`http://127.0.0.1:${port}${mode==='combined'?'/healthz':'/'}`,{signal:AbortSignal.timeout(500)});if(response.ok){ready=true;break;}lastProbe=`HTTP ${response.status}`;}catch(error){lastProbe=error instanceof Error?error.message:String(error);}
       await new Promise(resolve=>setTimeout(resolve,100));
     }
-    assert.equal(ready,true,'Production server did not become ready.');
+    assert.equal(ready,true,`Production server did not become ready (${lastProbe}):\n`+output);
     const read=async()=>{
       const response=await fetch(`http://127.0.0.1:${port}/`,{signal:AbortSignal.timeout(5000)});
       assert.equal(response.status,200);

@@ -39,6 +39,8 @@ For the current cookie-based login, use related HTTPS hostnames such as `app.exa
 
 See [deployment](docs/deployment.md) for Vercel, the backend Docker image, TLS ingress and persistent storage. [Split hosting](docs/split-hosting.md) covers independent development commands. [Migration](docs/cloud-migration.md) explains moving existing private data without running two writers.
 
+For temporary relays without related frontend/backend domains, see [same-origin desktop hosting](docs/temporary-desktop-hosting.md). This mode uses a server-only gateway credential on Vercel; Discord, session/encryption and SFU secrets stay on the backend.
+
 ## Stop, backup and restore
 
 ```powershell
