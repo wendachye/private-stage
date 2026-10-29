@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      livekit:
+        description: Run native media integration against an ephemeral local LiveKit server
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  NEXT_PUBLIC_API_URL: ''
+
+jobs:
+  checks:
+    name: Typecheck, build and portable tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      RUN_PRODUCTION_CHECK: '1'
+      RUN_LIVEKIT_INTEGRATION: '0'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.18.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install locked workspace dependencies
+        run: npm ci
+      - name: Typecheck all projects
+        run: npm run typecheck
+      - name: Build frontend and backend
+        run: npm run build
+      - name: Run tests including compiled backend and production HTML
+        run: npm test
+
+  media:
+    name: Optional native media integration
+    if: github.event_name == 'workflow_dispatch' && inputs.livekit
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      RUN_PRODUCTION_CHECK: '0'
+      RUN_LIVEKIT_INTEGRATION: '1'
+      LIVEKIT_INTERNAL_URL: http://127.0.0.1:7880
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.18.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install locked workspace dependencies
+        run: npm ci
+      - name: Start isolated LiveKit with disposable keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          api_key="ci-$(openssl rand -hex 12)"
+          api_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$api_key"
+          echo "::add-mask::$api_secret"
+          printf 'LIVEKIT_API_KEY=%s\nLIVEKIT_API_SECRET=%s\n' "$api_key" "$api_secret" >> "$GITHUB_ENV"
+          umask 077
+          cat > "$RUNNER_TEMP/private-stage-ci-livekit.yaml" <<EOF
+          port: 7880
+          bind_addresses:
+            - 127.0.0.1
+          rtc:
+            tcp_port: 7881
+            udp_port: 7882
+            use_external_ip: false
+            node_ip: 127.0.0.1
+          keys:
+            $api_key: $api_secret
+          room:
+            auto_create: false
+          logging:
+            level: warn
+          EOF
+          docker run --detach --name private-stage-ci-livekit \
+            --network host --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$RUNNER_TEMP/private-stage-ci-livekit.yaml,target=/etc/livekit.yaml,readonly" \
+            livekit/livekit-server:v1.13.11 --config /etc/livekit.yaml
+          for attempt in {1..60}; do
+            if curl --fail --silent --max-time 1 http://127.0.0.1:7880/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'Ephemeral LiveKit did not become ready.' >&2
+          exit 1
+      - name: Verify synthetic media, moderation and crash recovery
+        run: npm run test:media
+      - name: Remove disposable container and configuration
+        if: always()
+        shell: bash
+        run: |
+          docker rm --force private-stage-ci-livekit > /dev/null 2>&1 || true
+          rm -f -- "$RUNNER_TEMP/private-stage-ci-livekit.yaml"
