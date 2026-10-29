@@ -40,10 +40,10 @@ test('configured remote backend receives only API, authenticated media and healt
   const config = JSON.parse(result.stdout);
   assert.deepEqual(config.rewrites, [
     { source: '/api/:path*', destination: 'https://temporary.example.test:8443/api/:path*' },
-    { source: '/rtc/:path*', destination: 'https://temporary.example.test:8443/rtc/:path*' },
+    { source: '/rtc/:path+', destination: 'https://temporary.example.test:8443/rtc/:path+' },
     { source: '/healthz', destination: 'https://temporary.example.test:8443/healthz' },
   ]);
-  assert.deepEqual(config.headers.map((route: { source: string }) => route.source), config.rewrites.map((route: { source: string }) => route.source));
+  assert.deepEqual(config.headers.map((route: { source: string }) => route.source), ['/api/:path*', '/rtc/:path*', '/healthz']);
   for (const route of config.headers) {
     assert.deepEqual(route.headers, [
       { key: 'Cache-Control', value: 'no-store' },

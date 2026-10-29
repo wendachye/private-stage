@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 
 // Next's production TS config loader compiles this file to CommonJS. Resolve
 // the plain-JS helper absolutely so its synthetic module cannot rebase imports.
-const { backendPaths, backendProxyConfig } = createRequire(import.meta.url)(
+const { backendPaths, backendRewritePaths, backendProxyConfig } = createRequire(import.meta.url)(
   fileURLToPath(new URL('./server/backend-proxy-config.mjs', import.meta.url)),
 ) as typeof import('./server/backend-proxy-config.mjs');
 
@@ -23,7 +23,7 @@ const config:NextConfig={
   async rewrites() {
     // The desktop server owns these paths when no remote backend is configured.
     if (!backend) return [];
-    return backendPaths.map(source => ({ source, destination: backend.origin + source }));
+    return backendRewritePaths.map(source => ({ source, destination: backend.origin + source }));
   },
   async headers() {
     if (!backend) return [];

@@ -20,6 +20,8 @@ export function backendProxyConfig(environment = process.env) {
 }
 
 export const backendPaths = ['/api/:path*', '/rtc/:path*', '/healthz'];
+// The exact /rtc path belongs to the Vercel WebSocket function, not an HTTP rewrite.
+export const backendRewritePaths = ['/api/:path*', '/rtc/:path+', '/healthz'];
 
 /** @param {string} pathname */
 export function isBackendPath(pathname) {

@@ -1,6 +1,6 @@
 # Verification status
 
-The last desktop validation checkpoint on 2026-10-29 used Node.js 24.18.0 on Windows: **232 tests passed, with no failures or skips**, with both production and LiveKit integration checks enabled against a disposable local SFU with fictional keys. Frontend and backend production builds and all three TypeScript checks also passed. This records the tested scope; it does not replace the pending checks below.
+The last desktop validation checkpoint on 2026-10-29 used Node.js 24.18.0 on Windows: **238 tests passed, with no failures or skips**, with both production and LiveKit integration checks enabled against a disposable local SFU with fictional keys. Frontend and backend production builds and all three TypeScript checks also passed. This records the tested scope; it does not replace the pending checks below.
 
 ## What has been checked
 

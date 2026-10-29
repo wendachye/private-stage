@@ -14,7 +14,9 @@ Keep the frontend Root Directory and shared-source configuration described in [d
 
 The last two variables are server-only. Never prefix the proxy secret with `NEXT_PUBLIC_`. Keep Discord client secrets, session/encryption keys and LiveKit API secrets on the desktop backend. Import private environment files locally; do not commit them or paste their contents into chat.
 
-The frontend proxies only `/api`, `/rtc` and `/healthz` paths. It supplies the private gateway header, replaces caller-supplied values and disables caching. The local gateway verifies that header, removes it before the API and sets the backend's configured public Host. HTML retains its independent request-specific CSP nonce.
+The frontend proxies HTTP API, validation and health paths. The exact `/rtc` path uses a dedicated Node.js Vercel Function with the documented WebSocket upgrade API, because an external HTTP rewrite does not preserve its upgrade. That function opens the authenticated backend connection before accepting the browser, preserves binary/text messages and the original Cookie/Origin, and bounds pending messages and buffers. It requests a reconnect before the function's 300-second deadline. Durable room policy and publication accounting remain on the desktop backend.
+
+The frontend supplies the private gateway header, replaces caller-supplied values and disables HTTP caching. The local gateway verifies that header, removes it before the API and sets the backend's configured public Host. HTML retains its independent request-specific CSP nonce. The gateway credential never belongs in browser code.
 
 With `https://frontend.example.com` as the browser origin, configure backend `APP_URL` and `FRONTEND_URL` to that same origin. Register this Discord OAuth redirect:
 
@@ -36,6 +38,6 @@ The temporary route was tested with isolated synthetic media: decoded video/audi
 
 Pinggy's free HTTP and UDP tunnels expire after about 60 minutes. Their URLs and UDP allocations change on reconnect. The server-side proxy supplies Pinggy's documented screening header; a browser calling the free tunnel directly may receive an interstitial instead of API JSON. Coordinate allocation changes with the LiveKit configuration and Vercel environment, rather than blindly restarting an expired relay.
 
-Actual Vercel forwarding still needs acceptance for WebSocket Upgrade and sustained SSE. Vercel Functions supporting WebSockets does not by itself establish external rewrite behavior. A public web/media path also does not establish TURN connectivity or sustained 10–15-person capacity. Physical microphone, reboot and the final second-user checks retain their separate scope.
+Every deployment still needs acceptance for authenticated WebSocket Upgrade, sustained SSE and media after reconnect. A public web/media path does not establish TURN connectivity or sustained 10–15-person capacity. Physical microphone, reboot and the final second-user checks retain their separate scope.
 
 Official references: [Pinggy Docker and UDP](https://pinggy.io/docs/docker/), [screening behavior](https://pinggy.io/docs/http_tunnels/screening/), [Vercel rewrites](https://vercel.com/docs/routing/rewrites), [WebSocket lifecycle](https://vercel.com/docs/functions/websockets), [LiveKit ports](https://docs.livekit.io/transport/self-hosting/ports-firewall/).
